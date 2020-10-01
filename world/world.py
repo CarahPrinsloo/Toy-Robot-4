@@ -1,4 +1,4 @@
-import turtle
+import world.obstacles
 
 # variables tracking position and direction
 position_x = 0
@@ -10,28 +10,13 @@ current_direction_index = 0
 min_y, max_y = -200, 200
 min_x, max_x = -100, 100
 
-
-def execute_valid_move(move, steps):
-    """Commands turtle to execute move
-    ::returns true if move is executed"""
-
-    moved = False
-    if move == 'forward':
-        turtle.forward(steps)
-        moved = True
-    elif move == 'back':
-        turtle.back(steps)
-        moved = True
-    elif move == 'right':
-        turtle.right(steps)
-        moved = True
-    elif move == 'left':
-        turtle.left(steps)
-        moved = True
-    return moved   
+def show_position(robot_name):
+    output = ' > '+robot_name+' now at position ('+str(position_x)+','+str(position_y)+').'
+    print(output)
+    update_text_file_with_robot_position(output)
 
 
-def is_position_allowed(new_x, new_y):
+def is_position_allowed(new_x, new_y, obstacle_list):
     """
     Checks if the new position will still fall within the max area limit
     :param new_x: the new/proposed x position
@@ -39,10 +24,14 @@ def is_position_allowed(new_x, new_y):
     :return: True if allowed, i.e. it falls in the allowed area, else False
     """
 
-    return min_x <= new_x <= max_x and min_y <= new_y <= max_y
+    if not (min_x <= new_x <= max_x and min_y <= new_y <= max_y):
+        return False, ': Sorry, I cannot go outside my safe zone.'
+    if world.obstacles.is_path_blocked(position_x, position_y, new_x, new_y, obstacle_list):
+        return False, ': Sorry, there is an obstacle in the way.'
+    return True, ''
 
 
-def update_position(steps):
+def update_position(steps, obstacle_list):
     """
     Update the current x and y positions given the current direction, and specific nr of steps
     :param steps:
@@ -62,9 +51,15 @@ def update_position(steps):
     elif directions[current_direction_index] == 'left':
         new_x = new_x - int(steps)
 
-    if is_position_allowed(new_x, new_y):
+    allowed, output = is_position_allowed(new_x, new_y, obstacle_list)
+    if allowed:
         position_x = new_x
         position_y = new_y
-        if execute_valid_move(directions[current_direction_index], steps):
-            return True
-    return False
+        return True, output
+    return False, output
+
+def update_text_file_with_robot_position(output):
+    file_object = open('world/text/world.txt', 'a')
+    file_object.write(str(output))
+    file_object.close()
+    

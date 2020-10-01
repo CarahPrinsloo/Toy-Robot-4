@@ -1,8 +1,13 @@
 import world.world
 import world.turtle.world
+import world.obstacles
+import sys
 
 # list of valid command names
 valid_commands = ['off', 'help', 'forward', 'back', 'right', 'left', 'sprint', 'replay', 'replay silent', 'replay reversed', 'replay reversed silent']
+
+#mode: turtle/text
+mode_is_turtle = False
 
 def get_robot_name():
     name = input("What do you want to name your robot? ")
@@ -128,22 +133,27 @@ SPRINT - sprint forward according to a formula
 """
 
 
-def do_forward(robot_name, steps, silent):
+def do_forward(robot_name, steps, silent, obstacle_list):
     """
     Moves the robot forward the number of steps
     :param robot_name:
     :param steps:
     :return: (True, forward output text)
     """
-    if world.turtle.world.update_position(steps) and not silent:
+    if mode_is_turtle:
+        position_was_updated, output = world.turtle.world.update_position(steps, obstacle_list)
+    else:
+        position_was_updated, output = world.world.update_position(steps, obstacle_list)
+
+    if position_was_updated and not silent:
         return True, ' > '+robot_name+' moved forward by '+str(steps)+' steps.'
     elif silent:
         return True, ''
     else:
-        return True, ''+robot_name+': Sorry, I cannot go outside my safe zone.'
+        return True, ''+ robot_name + str(output)
 
 
-def do_back(robot_name, steps, silent):
+def do_back(robot_name, steps, silent, obstacle_list):
     """
     Moves the robot forward the number of steps
     :param robot_name:
@@ -151,7 +161,12 @@ def do_back(robot_name, steps, silent):
     :return: (True, forward output text)
     """
 
-    if world.turtle.world.update_position(-steps) and not silent:
+    if mode_is_turtle:
+        position_was_updated = world.turtle.world.update_position(-steps, obstacle_list)
+    else:
+        position_was_updated = world.world.update_position(-steps, obstacle_list)
+
+    if position_was_updated and not silent:
         return True, ' > '+robot_name+' moved back by '+str(steps)+' steps.'
     elif not silent:
         return True, ''+robot_name+': Sorry, I cannot go outside my safe zone.'
@@ -166,11 +181,16 @@ def do_right_turn(robot_name, silent):
     :return: (True, right turn output text)
     """
 
-    world.world.current_direction_index += 1
-    if world.world.current_direction_index > 3:
-        world.world.current_direction_index = 0
-
-    world.turtle.world.execute_valid_move('right', 0)
+    if mode_is_turtle:
+        world.turtle.world.current_direction_index += 1
+        if world.turtle.world.current_direction_index > 3:
+            world.turtle.world.current_direction_index = 0
+        world.turtle.world.change_turtle_direction('right')
+        world.turtle.world.move_turtle()
+    else:
+        world.world.current_direction_index += 1
+        if world.world.current_direction_index > 3:
+            world.world.current_direction_index = 0
 
     if not silent:
         text = ' > '+robot_name+' turned right.'
@@ -186,11 +206,16 @@ def do_left_turn(robot_name, silent):
     :return: (True, left turn output text)
     """
 
-    world.world.current_direction_index -= 1
-    if world.world.current_direction_index < 0:
-        world.world.current_direction_index = 3
-
-    world.turtle.world.execute_valid_move('right', 0)
+    if mode_is_turtle:
+        world.turtle.world.current_direction_index -= 1
+        if world.turtle.world.current_direction_index < 0:
+            world.turtle.world.current_direction_index = 3
+        world.turtle.world.change_turtle_direction('left')
+        world.turtle.world.move_turtle()
+    else:
+        world.world.current_direction_index -= 1
+        if world.world.current_direction_index < 0:
+            world.world.current_direction_index = 3
 
     if not silent:
         return True, ' > '+robot_name+' turned left.'
@@ -307,7 +332,7 @@ def do_replay(robot_name, arg1, arg2, silent, reversed, history):
         return normal_replay(robot_name, arg1, arg2, silent, history)
 
 
-def handle_command(robot_name, command, silent, history):
+def handle_command(robot_name, command, silent, history, obstacle_list):
     """
     Handles a command by asking different functions to handle each command.
     :param robot_name: the name given to robot
@@ -322,9 +347,9 @@ def handle_command(robot_name, command, silent, history):
     elif command_name == 'help':
         (do_next, command_output) = do_help()
     elif command_name == 'forward':
-        (do_next, command_output) = do_forward(robot_name, int(arg1), silent)
+        (do_next, command_output) = do_forward(robot_name, int(arg1), silent, obstacle_list)
     elif command_name == 'back':
-        (do_next, command_output) = do_back(robot_name, int(arg1), silent)
+        (do_next, command_output) = do_back(robot_name, int(arg1), silent, obstacle_list)
     elif command_name == 'right':
         (do_next, command_output) = do_right_turn(robot_name, silent)
     elif command_name == 'left':
@@ -342,7 +367,10 @@ def handle_command(robot_name, command, silent, history):
 
     if not silent:
         print(command_output)
-        world.world.show_position(robot_name)
+        if mode_is_turtle:
+            world.turtle.world.show_position(robot_name)
+        else:
+            world.world.show_position(robot_name)
     return do_next
 
 
@@ -357,19 +385,44 @@ def delete_content_of_text_file(filename):
     return open(filename,'w')
 
 
+def get_mode_from_argv():
+    if len(sys.argv) < 2:
+        return 'text'
+    return sys.argv[1]
+
+
+def get_world_module_path():
+    global mode_is_turtle
+    mode = get_mode_from_argv()
+    if mode == 'turtle':
+        mode_is_turtle = True
+
+
 def robot_start():
     """This is the entry point for starting my robot"""
 
+    get_world_module_path()
+    history = []
+    obstacle_list = world.obstacles.get_obstacles()  
+
+    if mode_is_turtle:
+        world.turtle.world.position_x = 0
+        world.turtle.world.position_y = 0
+        world.turtle.world.current_direction_index = 0
+        world.turtle.world.change_turtle_direction('left')
+        world.turtle.world.draw_obstacles_on_map(obstacle_list)
+    else:
+        world.world.position_x = 0
+        world.world.position_y = 0
+        world.world.current_direction_index = 0
+        
     robot_name = get_robot_name()
     output(robot_name, "Hello kiddo!")
-
-    world.world.position_x = 0
-    world.world.position_y = 0
-    world.world.current_direction_index = 0
-    history = []
+    world.obstacles.print_obstacle_list(obstacle_list)
+    
 
     command = get_command(robot_name, history)
-    while handle_command(robot_name, command, False, history):
+    while handle_command(robot_name, command, False, history, obstacle_list):
         command = get_command(robot_name, history)
     
     delete_content_of_text_file('world/text/world.txt')   
