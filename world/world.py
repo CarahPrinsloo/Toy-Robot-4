@@ -16,7 +16,7 @@ def show_position(robot_name):
     update_text_file_with_robot_position(output)
 
 
-def is_position_allowed(new_x, new_y, obstacle_list):
+def is_position_allowed(new_x, new_y):
     """
     Checks if the new position will still fall within the max area limit
     :param new_x: the new/proposed x position
@@ -26,12 +26,12 @@ def is_position_allowed(new_x, new_y, obstacle_list):
 
     if not (min_x <= new_x <= max_x and min_y <= new_y <= max_y):
         return False, ': Sorry, I cannot go outside my safe zone.'
-    if world.obstacles.is_path_blocked(position_x, position_y, new_x, new_y, obstacle_list):
+    if world.obstacles.is_path_blocked(position_x, position_y, new_x, new_y):
         return False, ': Sorry, there is an obstacle in the way.'
     return True, ''
 
 
-def update_position(steps, obstacle_list):
+def update_position(steps):
     """
     Update the current x and y positions given the current direction, and specific nr of steps
     :param steps:
@@ -51,7 +51,7 @@ def update_position(steps, obstacle_list):
     elif directions[current_direction_index] == 'left':
         new_x = new_x - int(steps)
 
-    allowed, output = is_position_allowed(new_x, new_y, obstacle_list)
+    allowed, output = is_position_allowed(new_x, new_y)
     if allowed:
         position_x = new_x
         position_y = new_y

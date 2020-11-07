@@ -1,5 +1,6 @@
 import turtle
 import world.obstacles
+import robot
 
 # variables tracking position and direction
 position_x = 0
@@ -12,29 +13,10 @@ min_y, max_y = -200, 200
 min_x, max_x = -100, 100
 
 
-def show_position(robot_name):
-    print(' > '+robot_name+' now at position ('+str(position_x)+','+str(position_y)+').')
+def draw_filled_square_obstacle(start_x, end_x, start_y, end_y):
+    '''Draws square obstacle on turtle map at indicated position'''
 
-
-def draw_vertical_obstacle(start_x, start_y, end_y):
-    turtle.goto(start_x, start_y)
-    turtle.pendown()
-    turtle.begin_fill()
-    turtle.forward(int(end_y) - int(start_y))
-    turtle.end_fill()
-
-
-def draw_horizontal_obstacle(start_x, end_x, start_y):
-    turtle.goto(start_x, start_y)
-    turtle.pendown()
-    change_turtle_direction('right')
-    turtle.begin_fill()
-    turtle.forward(int(end_x) - int(start_x))
-    turtle.end_fill()
-    change_turtle_direction('left')
-
-
-def draw_square_obstacle(start_x, end_x, start_y, end_y):
+    turtle.penup()
     turtle.goto(start_x, start_y)
     turtle.pendown()
     turtle.begin_fill()
@@ -44,38 +26,73 @@ def draw_square_obstacle(start_x, end_x, start_y, end_y):
         change_turtle_direction('right')
         turtle.forward(int(end_y) - int(start_y))
     turtle.end_fill()
-
-
-def draw_obstacles_on_map(obstacles):
-    turtle.color('red', 'red')
-    for obstacle in obstacles:
-        start_x, end_x, start_y, end_y = obstacle[0], obstacle[1], obstacle[2], obstacle[3]
-        turtle.penup()
-        if start_x == end_x:
-            draw_vertical_obstacle(start_x, start_y, end_y)
-        elif start_y == end_y:
-            draw_horizontal_obstacle(start_x, end_x, start_y)
-        else:
-            draw_square_obstacle(start_x, end_x, start_y, end_y)
     turtle.penup()
+
+
+def draw_obstacles_on_map():
+    '''Draws all obstacles on turtle map'''
+
+    turtle.color('red', 'red')
+    for obstacle in robot.obstacles:
+        start_x, end_x, start_y, end_y = obstacle[0], obstacle[1], obstacle[2], obstacle[3]
+        draw_filled_square_obstacle(start_x, end_x, start_y, end_y)
     reset_turtle_to_start()
 
 
 def reset_turtle_to_start():
+    '''Return turtle to position on turtle map where player starts game'''
+
     turtle.goto(0,0)
     turtle.color('black', 'black')
+    change_turtle_direction('left')
     turtle.pendown()
 
 
-def change_turtle_direction(move):
+def change_turtle_direction(direction):
+    '''Moves turtle in direction indicated'''
+
     turtle.degrees()
-    if move == 'right':
+    if direction == 'right':
         turtle.right(90)
-    elif move == 'left':
+    elif direction == 'left':
         turtle.left(90)
 
 
+def draw_restricted_area(start_x, start_y, end_x, end_y):
+    '''Draws restricted area on turtle map'''
+
+    turtle.penup()
+    turtle.goto(start_x, start_y)
+    turtle.pendown()
+    turtle.color('red')
+    change_turtle_direction('left')
+    for i in range(2):
+        turtle.forward(int(end_y) - int(start_y))
+        change_turtle_direction('right')
+        turtle.forward(int(end_x) - int(start_x))
+        change_turtle_direction('right')
+    turtle.penup()
+
+
+def create_turtle_world():
+    '''Create turtle map'''
+
+    s = turtle.getscreen()
+    turtle.title('My Turtle Robot World')
+    turtle.setworldcoordinates(-100,-200,100,200)
+    draw_restricted_area(-100,-200,100,200)
+    draw_obstacles_on_map()
+
+
+def show_position(robot_name):
+    '''Prints position of turtle robot'''
+
+    print(' > '+robot_name+' now at position ('+str(position_x)+','+str(position_y)+').')
+
+
 def move_turtle():
+    '''Move turtle on turtle map'''
+
     turtle.mode()
     try:
         turtle.goto(position_x, position_y)
@@ -83,7 +100,7 @@ def move_turtle():
         return False
     return True
 
-def is_position_allowed(new_x, new_y, obstacle):
+def is_position_allowed(new_x, new_y):
     """
     Checks if the new position will still fall within the max area limit
     :param new_x: the new/proposed x position
@@ -92,12 +109,12 @@ def is_position_allowed(new_x, new_y, obstacle):
     """
     if not (min_x <= new_x <= max_x and min_y <= new_y <= max_y):
         return False, ': Sorry, I cannot go outside my safe zone.'
-    if world.obstacles.is_path_blocked(position_x, position_y, new_x, new_y, obstacle):
+    if world.obstacles.is_path_blocked(position_x, position_y, new_x, new_y):
         return False, ': Sorry, there is an obstacle in the way.'
     return True, ''
 
 
-def update_position(steps, obstacle_list):
+def update_position(steps):
     """
     Update the current x and y positions given the current direction, and specific nr of steps
     :param steps:
@@ -117,7 +134,7 @@ def update_position(steps, obstacle_list):
     elif directions[current_direction_index] == 'left':
         new_x = new_x - int(steps)
 
-    allowed, output = is_position_allowed(new_x, new_y, obstacle_list)
+    allowed, output = is_position_allowed(new_x, new_y)
     if allowed:
         position_x = new_x
         position_y = new_y

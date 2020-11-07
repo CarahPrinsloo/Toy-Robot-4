@@ -8,8 +8,12 @@ valid_commands = ['off', 'help', 'forward', 'back', 'right', 'left', 'sprint', '
 
 #mode: turtle/text
 mode_is_turtle = False
+obstacles = []
 
 def get_robot_name():
+    '''Gets robot name from player
+    :: returns name chosen by player'''
+
     name = input("What do you want to name your robot? ")
     while len(name) == 0:
         name = input("What do you want to name your robot? ")
@@ -32,14 +36,19 @@ def get_command(robot_name, history):
     return command.lower()
 
 
-def list_contains_only_numbers(num_list):
-    for i in range(2):
-        if not num_list[i].isdigit():
+def list_contains_only_numbers(lst):
+    '''Checks if list only consists of integers
+    :: returns True if list contains only integers'''
+
+    for i in range(len(lst)):
+        if not lst[i].isdigit():
             return False
     return True
 
 
 def set_replay_limits(args, index):
+    '''From input, determines the start and end of replay (if specified)
+    :: updates args list accordingly'''
 
     limits = args[index].split('-')
     args[1] = limits[0]
@@ -52,6 +61,9 @@ def set_replay_limits(args, index):
 
 
 def is_move_with_steps(args):
+    '''Determines whether player entered # steps
+    :: returns True if player entered steps'''
+
     command_name = args[0].lower()
     if len(args) > 1 and (command_name == 'forward' or command_name == 'back' or command_name == 'sprint' or command_name == 'replay'):
         return True
@@ -133,7 +145,7 @@ SPRINT - sprint forward according to a formula
 """
 
 
-def do_forward(robot_name, steps, silent, obstacle_list):
+def do_forward(robot_name, steps, silent):
     """
     Moves the robot forward the number of steps
     :param robot_name:
@@ -141,9 +153,9 @@ def do_forward(robot_name, steps, silent, obstacle_list):
     :return: (True, forward output text)
     """
     if mode_is_turtle:
-        position_was_updated, output = world.turtle.world.update_position(steps, obstacle_list)
+        position_was_updated, output = world.turtle.world.update_position(steps)
     else:
-        position_was_updated, output = world.world.update_position(steps, obstacle_list)
+        position_was_updated, output = world.world.update_position(steps)
 
     if position_was_updated and not silent:
         return True, ' > '+robot_name+' moved forward by '+str(steps)+' steps.'
@@ -153,7 +165,7 @@ def do_forward(robot_name, steps, silent, obstacle_list):
         return True, ''+ robot_name + str(output)
 
 
-def do_back(robot_name, steps, silent, obstacle_list):
+def do_back(robot_name, steps, silent):
     """
     Moves the robot forward the number of steps
     :param robot_name:
@@ -162,9 +174,9 @@ def do_back(robot_name, steps, silent, obstacle_list):
     """
 
     if mode_is_turtle:
-        position_was_updated = world.turtle.world.update_position(-steps, obstacle_list)
+        position_was_updated = world.turtle.world.update_position(-steps)
     else:
-        position_was_updated = world.world.update_position(-steps, obstacle_list)
+        position_was_updated = world.world.update_position(-steps)
 
     if position_was_updated and not silent:
         return True, ' > '+robot_name+' moved back by '+str(steps)+' steps.'
@@ -332,7 +344,7 @@ def do_replay(robot_name, arg1, arg2, silent, reversed, history):
         return normal_replay(robot_name, arg1, arg2, silent, history)
 
 
-def handle_command(robot_name, command, silent, history, obstacle_list):
+def handle_command(robot_name, command, silent, history):
     """
     Handles a command by asking different functions to handle each command.
     :param robot_name: the name given to robot
@@ -347,9 +359,9 @@ def handle_command(robot_name, command, silent, history, obstacle_list):
     elif command_name == 'help':
         (do_next, command_output) = do_help()
     elif command_name == 'forward':
-        (do_next, command_output) = do_forward(robot_name, int(arg1), silent, obstacle_list)
+        (do_next, command_output) = do_forward(robot_name, int(arg1), silent)
     elif command_name == 'back':
-        (do_next, command_output) = do_back(robot_name, int(arg1), silent, obstacle_list)
+        (do_next, command_output) = do_back(robot_name, int(arg1), silent)
     elif command_name == 'right':
         (do_next, command_output) = do_right_turn(robot_name, silent)
     elif command_name == 'left':
@@ -375,6 +387,7 @@ def handle_command(robot_name, command, silent, history, obstacle_list):
 
 
 def update_history(command, history):
+    '''Updates history list with executed moves'''
     
     args = command.split()
     if (args[0] == 'forward' or args[0] == 'back' or args[0] == 'right' or args[0] == 'left' or args[0] == 'sprint'):
@@ -382,17 +395,25 @@ def update_history(command, history):
 
 
 def delete_content_of_text_file(filename):
+    '''Deletes contents of text file'''
+
     return open(filename,'w')
 
 
 def get_mode_from_argv():
+    '''Determines player chose turtle or text mode
+    :: returns mode chosen'''
+
     if len(sys.argv) < 2:
         return 'text'
     return sys.argv[1]
 
 
 def get_world_module_path():
+    '''Sets boolean mode_is_turtle to correct mode'''
+
     global mode_is_turtle
+
     mode = get_mode_from_argv()
     if mode == 'turtle':
         mode_is_turtle = True
@@ -400,17 +421,18 @@ def get_world_module_path():
 
 def robot_start():
     """This is the entry point for starting my robot"""
-
+    global obstacles
+    
     get_world_module_path()
     history = []
-    obstacle_list = world.obstacles.get_obstacles()  
+    world.obstacles.get_obstacles()
 
     if mode_is_turtle:
         world.turtle.world.position_x = 0
         world.turtle.world.position_y = 0
         world.turtle.world.current_direction_index = 0
-        world.turtle.world.change_turtle_direction('left')
-        world.turtle.world.draw_obstacles_on_map(obstacle_list)
+        world.turtle.world.create_turtle_world()
+        world.turtle.world.change_turtle_direction('right')
     else:
         world.world.position_x = 0
         world.world.position_y = 0
@@ -418,16 +440,16 @@ def robot_start():
         
     robot_name = get_robot_name()
     output(robot_name, "Hello kiddo!")
-    world.obstacles.print_obstacle_list(obstacle_list)
+    world.obstacles.print_obstacle_list()
     
 
     command = get_command(robot_name, history)
-    while handle_command(robot_name, command, False, history, obstacle_list):
+    while handle_command(robot_name, command, False, history):
         command = get_command(robot_name, history)
     
     delete_content_of_text_file('world/text/world.txt')   
     output(robot_name, "Shutting down..")
-
+    obstacles = []
 
 if __name__ == "__main__":
     robot_start()
